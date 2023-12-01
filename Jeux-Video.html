@@ -1,0 +1,250 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                font-family: 'Arial', sans-serif;
+                background: linear-gradient(to bottom, #87CEEB, #3498DB);
+                background-color: rgb(210, 111, 30);
+            }
+
+            .game-object {
+                position: absolute;
+                border-radius: 50%;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                color: rgb(255, 255, 255);
+            }
+
+            .ball {
+                width: 50px;
+                height: 50px;
+            }
+
+            .bomb {
+                width: 40px;
+                height: 40px;
+                animation: blink 1s infinite;
+            }
+
+            @keyframes blink {
+                50% {
+                    background-color: red;
+                }
+            }
+
+            #score {
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                font-size: 18px;
+                color: rgb(0, 0, 0);
+                border: 2px solid rgb(0, 0, 0);
+                padding: 5px;
+                border-radius: 5px;
+            }
+
+            #gameOver {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 50px;
+                color: rgb(0, 0, 0);
+                display: none;
+            }
+
+            #gameOverScreen {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgb(0, 0, 0);
+                opacity: 0.8;
+                display: none;
+            }
+
+            #bloodSplatter {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image: url('blood-splatter.png');
+                background-size: cover;
+                opacity: 0.5;
+                display: none;
+            }
+
+            #restartButton {
+                position: absolute;
+                top: 70%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 24px;
+                color: white;
+                cursor: pointer;
+                background-color: #4CAF50;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                display: none;
+            }
+        </style>
+        <title>Ball Game</title>
+    </head>
+    <body>
+        <script>
+            const levels = [
+                { type: 'ball', color: 'red', size: 50, points: 20 },
+                { type: 'ball', color: 'green', size: 30, points: 15 },
+                { type: 'ball', color: 'blue', size: 25, points: 5 },
+                { type: 'bomb', size: 40, points: -20 }
+            ];
+
+            let score = 0;
+            let objects = [];
+            let difficultyMultiplier = 1;
+
+            function createObject(level) {
+                const object = document.createElement('div');
+                object.className = `game-object ${level.type}`;
+                object.style.width = `${level.size}px`;
+                object.style.height = `${level.size}px`;
+
+                if (level.type === 'ball') {
+                    object.style.backgroundColor = level.color;
+                } else if (level.type === 'bomb') {
+                    object.style.backgroundColor = 'black';
+                }
+
+                object.style.left = `${Math.random() * (window.innerWidth - level.size)}px`;
+                object.style.top = `${Math.random() * (window.innerHeight - level.size)}px`;
+
+                const pointsText = document.createElement('span');
+                pointsText.innerText = level.points;
+                object.appendChild(pointsText);
+
+                object.addEventListener('click', () => {
+                    if (level.type === 'bomb') {
+                        showGameOver();
+                    } else {
+                        score += level.points;
+                        updateScore();
+                    }
+
+                    object.remove();
+                    createObject(getRandomizedLevel());
+                });
+
+                document.body.appendChild(object);
+
+                // Animation to eject objects upwards
+                const animationDuration = 1500 / difficultyMultiplier;
+                object.animate(
+                    [{ top: window.innerHeight }, { top: -object.clientHeight }],
+                    { duration: animationDuration, easing: 'linear' }
+                ).onfinish = () => {
+                    object.remove();
+                    createObject(getRandomizedLevel());
+                };
+
+                objects.push(object);
+            }
+
+            function updateScore() {
+                document.getElementById('score').innerText = `Score: ${score}`;
+                
+                // Increase difficulty after a certain score
+                if (score >= 50 && difficultyMultiplier === 1) {
+                    difficultyMultiplier = 1.5;
+                } else if (score >= 100 && difficultyMultiplier === 1.5) {
+                    difficultyMultiplier = 2;
+                }
+            }
+
+            function showGameOver() {
+                const gameOverElement = document.getElementById('gameOver');
+                const gameOverScreen = document.getElementById('gameOverScreen');
+                const bloodSplatter = document.getElementById('bloodSplatter');
+                const restartButton = document.getElementById('restartButton');
+
+                gameOverElement.style.display = 'block';
+                gameOverElement.innerText = 'GAME OVER';
+                gameOverScreen.style.display = 'block';
+                bloodSplatter.style.display = 'block';
+                restartButton.style.display = 'block';
+
+                // Hide all game objects
+                objects.forEach(obj => {
+                    obj.style.display = 'none';
+                });
+
+                // Optionally, you can add additional styling or actions when game over occurs
+
+                // Restart the game on button click
+                restartButton.addEventListener('click', () => {
+                    resetGame();
+                });
+            }
+
+            function resetGame() {
+                score = 0;
+                updateScore();
+
+                const gameOverElement = document.getElementById('gameOver');
+                const gameOverScreen = document.getElementById('gameOverScreen');
+                const bloodSplatter = document.getElementById('bloodSplatter');
+                const restartButton = document.getElementById('restartButton');
+
+                gameOverElement.style.display = 'none';
+                gameOverScreen.style.display = 'none';
+                bloodSplatter.style.display = 'none';
+                restartButton.style.display = 'none';
+
+                // Remove all game objects
+                objects.forEach(obj => {
+                    obj.remove();
+                });
+
+                objects = [];
+
+                difficultyMultiplier = 1;
+
+                createObject(getRandomizedLevel());
+            }
+
+            function getRandomizedLevel() {
+                // Adjust the likelihood of bomb appearance based on difficulty
+                const bombLikelihood = 0.1 / difficultyMultiplier;
+                const rand = Math.random();
+
+                if (rand < bombLikelihood) {
+                    return levels[3]; // Return bomb
+                } else {
+                    // Return a random ball
+                    return levels[Math.floor(Math.random() * 3)];
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                updateScore();
+                createObject(getRandomizedLevel());
+            });
+        </script>
+
+        <p id="score"></p>
+        <div id="gameOver"></div>
+        <div id="gameOverScreen"></div>
+        <div id="bloodSplatter"></div>
+        <button id="restartButton">Recommencer</button>
+    </body>
+    </html>
